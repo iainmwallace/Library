@@ -780,14 +780,33 @@
                 const authors = [...new Set(myBooks.map(book => book.author))];
                 const allSubjects = myBooks.flatMap(book => book.subjects || []);
 
-                // Get top subjects (genres) by frequency
+                // Get top subjects (genres) by frequency, filtering out generic terms
+                const genericTerms = [
+                    'fiction', 'literature', 'books', 'reading', 'accessible book',
+                    'large type books', 'translations', 'classic', 'classics',
+                    'open library staff picks', 'new york times bestseller',
+                    'bestseller', 'award winners', 'english literature',
+                    'american literature', 'british literature', 'contemporary',
+                    'modern', 'popular', 'collections', 'anthologies'
+                ];
+
                 const subjectFreq = {};
-                allSubjects.forEach(s => subjectFreq[s] = (subjectFreq[s] || 0) + 1);
+                allSubjects.forEach(s => {
+                    const lower = s.toLowerCase();
+                    // Only count subjects that are specific genres, not generic terms
+                    const isGeneric = genericTerms.some(term =>
+                        lower === term || lower.startsWith(term + ',') || lower.endsWith(term)
+                    );
+                    if (!isGeneric && s.length > 3) {
+                        subjectFreq[s] = (subjectFreq[s] || 0) + 1;
+                    }
+                });
+
                 const topSubjects = Object.entries(subjectFreq)
                     .sort((a, b) => b[1] - a[1])
                     .slice(0, 5)
                     .map(([subject]) => subject)
-                    .filter(s => s && !s.toLowerCase().includes('accessible book'));
+                    .filter(s => s && s.length > 3);
 
                 // Strategy 1: Get popular books from top genres (50% of results)
                 for (const subject of topSubjects.slice(0, 3)) {
@@ -797,12 +816,20 @@
 
                         if (data.docs) {
                             const filtered = data.docs
-                                .filter(book =>
-                                    !myBooks.some(myBook => myBook.key === book.key) &&
-                                    !seenKeys.has(book.key) &&
-                                    book.cover_i && // Has a cover image
-                                    book.first_publish_year >= 1980 // Not too old
-                                )
+                                .filter(book => {
+                                    // Extra validation: make sure the book actually matches the genre
+                                    const hasMatchingSubject = book.subject?.some(s =>
+                                        s.toLowerCase().includes(subject.toLowerCase()) ||
+                                        subject.toLowerCase().includes(s.toLowerCase())
+                                    );
+
+                                    return !myBooks.some(myBook => myBook.key === book.key) &&
+                                        !seenKeys.has(book.key) &&
+                                        book.cover_i &&
+                                        book.first_publish_year >= 1980 &&
+                                        book.author_name && // Must have an author
+                                        hasMatchingSubject; // Must actually be in this genre
+                                })
                                 .sort((a, b) => {
                                     // Sort by popularity
                                     const scoreA = (a.edition_count || 0) + (a.ratings_count || 0) * 10;
@@ -835,12 +862,18 @@
                             const newAuthorBooks = data.docs
                                 .filter(book => {
                                     const bookAuthor = book.author_name?.[0];
+                                    const hasMatchingSubject = book.subject?.some(s =>
+                                        s.toLowerCase().includes(subject.toLowerCase()) ||
+                                        subject.toLowerCase().includes(s.toLowerCase())
+                                    );
+
                                     return bookAuthor &&
                                         !authors.includes(bookAuthor) &&
                                         !myBooks.some(myBook => myBook.key === book.key) &&
                                         !seenKeys.has(book.key) &&
                                         book.cover_i &&
-                                        book.first_publish_year >= 1980;
+                                        book.first_publish_year >= 1980 &&
+                                        hasMatchingSubject;
                                 })
                                 .sort((a, b) => (b.edition_count || 0) - (a.edition_count || 0))
                                 .slice(0, 2);
