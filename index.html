@@ -281,6 +281,22 @@
             display: inline-block;
         }
 
+        .series-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 15px;
+            border-radius: 10px;
+            margin: 15px 0 10px 0;
+            font-weight: 600;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .series-group {
+            margin-bottom: 20px;
+        }
+
         @media (max-width: 600px) {
             h1 {
                 font-size: 2em;
@@ -327,6 +343,7 @@
 
     <script>
         let myBooks = JSON.parse(localStorage.getItem('myBooks') || '[]');
+        let lastSearchResults = []; // Store last search results
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
@@ -378,6 +395,7 @@
                 const data = await response.json();
 
                 if (data.docs && data.docs.length > 0) {
+                    lastSearchResults = data.docs; // Store for later filtering
                     displaySearchResults(data.docs);
                 } else {
                     resultsDiv.innerHTML = '<div class="empty-state">No books found. Try a different search.</div>';
@@ -391,40 +409,88 @@
         function displaySearchResults(books) {
             const resultsDiv = document.getElementById('searchResults');
 
-            const html = books.map(book => {
-                const title = book.title || 'Unknown Title';
-                const author = book.author_name ? book.author_name[0] : 'Unknown Author';
-                const year = book.first_publish_year || '';
-                const coverId = book.cover_i;
-                const coverUrl = coverId
-                    ? `https://covers.openlibrary.org/b/id/${coverId}-M.jpg`
-                    : '';
+            // Filter out books already in library
+            const filteredBooks = books.filter(book =>
+                !myBooks.some(b => b.key === book.key)
+            );
 
-                const bookData = {
-                    title: title,
-                    author: author,
-                    year: year,
-                    cover: coverUrl,
-                    key: book.key
-                };
+            if (filteredBooks.length === 0) {
+                resultsDiv.innerHTML = '<div class="empty-state">All books from this search are already in your library!</div>';
+                return;
+            }
 
-                const isAdded = myBooks.some(b => b.key === book.key);
-                const addedText = isAdded ? '✓ Added' : '+ Add';
-                const addedClass = isAdded ? 'opacity: 0.5' : '';
+            // Group books by series
+            const seriesGroups = {};
+            const noSeriesBooks = [];
 
-                return `
-                    <div class="book-item" onclick='addBook(${JSON.stringify(bookData)})' style="${addedClass}">
-                        ${coverUrl ? `<img src="${coverUrl}" class="book-cover" alt="${title}">` : '<div class="book-cover"></div>'}
-                        <div class="book-info">
-                            <div class="book-title">${title}</div>
-                            <div class="book-author">${author}</div>
-                            <div class="book-year">${year} ${isAdded ? '• ' + addedText : ''}</div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+            filteredBooks.forEach(book => {
+                // Check for series in different possible fields
+                const series = book.series?.[0] ||
+                             (book.subject?.find(s => s.includes('series')) || null);
+
+                if (series) {
+                    if (!seriesGroups[series]) {
+                        seriesGroups[series] = [];
+                    }
+                    seriesGroups[series].push(book);
+                } else {
+                    noSeriesBooks.push(book);
+                }
+            });
+
+            let html = '';
+
+            // Display series groups first
+            Object.keys(seriesGroups).sort().forEach(series => {
+                html += `<div class="series-group">`;
+                html += `<div class="series-header">📚 ${series}</div>`;
+                html += seriesGroups[series].map(book => renderBookItem(book)).join('');
+                html += `</div>`;
+            });
+
+            // Display non-series books
+            if (noSeriesBooks.length > 0) {
+                if (Object.keys(seriesGroups).length > 0) {
+                    html += `<div class="series-group">`;
+                    html += `<div class="series-header">📖 Individual Books</div>`;
+                }
+                html += noSeriesBooks.map(book => renderBookItem(book)).join('');
+                if (Object.keys(seriesGroups).length > 0) {
+                    html += `</div>`;
+                }
+            }
 
             resultsDiv.innerHTML = html;
+        }
+
+        function renderBookItem(book) {
+            const title = book.title || 'Unknown Title';
+            const author = book.author_name ? book.author_name[0] : 'Unknown Author';
+            const year = book.first_publish_year || '';
+            const coverId = book.cover_i;
+            const coverUrl = coverId
+                ? `https://covers.openlibrary.org/b/id/${coverId}-M.jpg`
+                : '';
+
+            const bookData = {
+                title: title,
+                author: author,
+                year: year,
+                cover: coverUrl,
+                key: book.key,
+                series: book.series?.[0] || null
+            };
+
+            return `
+                <div class="book-item" onclick='addBook(${JSON.stringify(bookData)})'>
+                    ${coverUrl ? `<img src="${coverUrl}" class="book-cover" alt="${title}">` : '<div class="book-cover"></div>'}
+                    <div class="book-info">
+                        <div class="book-title">${title}</div>
+                        <div class="book-author">${author}</div>
+                        <div class="book-year">${year}</div>
+                    </div>
+                </div>
+            `;
         }
 
         function addBook(book) {
@@ -435,8 +501,8 @@
             myBooks.push(book);
             localStorage.setItem('myBooks', JSON.stringify(myBooks));
 
-            // Re-render search results to show "Added" state
-            searchBooks();
+            // Re-render search results with the book removed
+            displaySearchResults(lastSearchResults);
 
             // Show success feedback
             const errorDiv = document.getElementById('searchError');
