@@ -880,7 +880,8 @@
                                 seenKeys.add(book.key);
                                 recommendations.push({
                                     ...book,
-                                    recommendedBy: `More by ${author}`,
+                                    recommendedBy: author,
+                                    recommendationType: 'author',
                                     score: (book.edition_count || 0) + (book.ratings_count || 0) * 10 + 200 // Boost favorite authors
                                 });
                             });
@@ -919,7 +920,18 @@
                         subjects: book.subject?.slice(0, 5) || []
                     };
 
-                    const reason = book.recommendedBy ? `By ${book.recommendedBy}` : 'Based on your reading';
+                    // Format the recommendation reason
+                    let reason = 'Based on your reading';
+                    if (book.recommendedBy) {
+                        if (book.recommendationType === 'author') {
+                            reason = `More by ${book.recommendedBy}`;
+                        } else if (book.recommendedBy === 'New author') {
+                            reason = 'New to you';
+                        } else {
+                            reason = book.recommendedBy; // Genre name
+                        }
+                    }
+
                     const bookDataJson = JSON.stringify(bookData).replace(/'/g, "\\'");
 
                     return `
