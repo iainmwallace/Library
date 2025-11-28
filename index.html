@@ -578,7 +578,7 @@
     <div class="container">
         <h1>
             📚 My Library
-            <span class="version">v1.3.0</span>
+            <span class="version">v1.3.1</span>
         </h1>
 
         <div class="tabs">
@@ -951,6 +951,8 @@
             return validatedBooks;
         }
 
+        let isGeneratingRecommendations = false;
+
         function removeBook(index) {
             if (confirm('Remove this book from your library?')) {
                 myBooks.splice(index, 1);
@@ -963,11 +965,18 @@
         async function generateRecommendations() {
             const recommendationsDiv = document.getElementById('recommendations');
 
+            // Prevent concurrent executions
+            if (isGeneratingRecommendations) {
+                console.log('Already generating recommendations, skipping...');
+                return;
+            }
+
             if (myBooks.length === 0) {
                 recommendationsDiv.innerHTML = '<div class="empty-state">Add some books to your library to get personalized recommendations!</div>';
                 return;
             }
 
+            isGeneratingRecommendations = true;
             recommendationsDiv.innerHTML = '<div class="loading">Generating recommendations...</div>';
 
             try {
@@ -1158,6 +1167,7 @@
 
                 if (recommendations.length === 0) {
                     recommendationsDiv.innerHTML = '<div class="empty-state">No recommendations found. Try adding more books to your library!</div>';
+                    isGeneratingRecommendations = false;
                     return;
                 }
 
@@ -1172,6 +1182,7 @@
 
                 if (uniqueRecs.length === 0) {
                     recommendationsDiv.innerHTML = '<div class="empty-state">No recommendations with descriptions found. Try adding more books to your library!</div>';
+                    isGeneratingRecommendations = false;
                     return;
                 }
 
@@ -1220,10 +1231,12 @@
                 }).join('') + '</div>';
 
                 recommendationsDiv.innerHTML = html;
+                isGeneratingRecommendations = false;
 
             } catch (error) {
                 console.error('Error generating recommendations:', error);
                 recommendationsDiv.innerHTML = '<div class="empty-state">Error loading recommendations. Please try again later.</div>';
+                isGeneratingRecommendations = false;
             }
         }
 
