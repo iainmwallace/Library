@@ -6,7 +6,7 @@ A mobile-optimized static web application for tracking books you've read and dis
 
 Single-file HTML/CSS/JavaScript application that runs entirely in the browser with no backend required. Data is stored locally using browser LocalStorage.
 
-**Live Version**: v1.3.2
+**Live Version**: v1.4.0
 
 ## Features
 
@@ -36,15 +36,16 @@ Enhanced three-strategy recommendation engine with quality filters:
 
 **Quality Filters:**
 - English-only books
-- Books with descriptions/summaries
 - Cover images required
 - Duplicate filtering across strategies
+- Descriptions preferred (books with descriptions shown first)
 
-Maximum 18 recommendations displayed after validation. **Refresh button** available to regenerate recommendations on demand.
+**Always shows 18 recommendations** - displays "No description available" for books without descriptions. **Refresh button** available to regenerate recommendations on demand.
 
 ### 4. Book Details Modal
-- Full book information with **guaranteed description/synopsis**
+- Full book information with **description/synopsis when available**
 - Descriptions pre-fetched for recommendations (instant display)
+- Fallback message for books without descriptions
 - Cover image
 - Publication year and publisher
 - Genres and topics
