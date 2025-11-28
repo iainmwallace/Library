@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recommendation Test - Lee Child Books</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        h1 { color: #2c3e50; }
+        h2 { color: #3498db; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        .book-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: #f9f9f9;
+            border-left: 3px solid #3498db;
+        }
+        .log-section {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .log-success { color: #4ec9b0; }
+        .log-error { color: #f48771; }
+        .log-warning { color: #dcdcaa; }
+        .log-info { color: #9cdcfe; }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .stat-box .value {
+            font-size: 2em;
+            font-weight: bold;
+        }
+        .stat-box .label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📚 Recommendation Algorithm Test</h1>
+        <p><strong>Test Library:</strong> Lee Child Jack Reacher series (20 books)</p>
+        <p><strong>Expected:</strong> Thriller recommendations from similar authors</p>
+
+        <button onclick="runTest()">▶ Run Test</button>
+        <button onclick="clearLogs()">🗑️ Clear Logs</button>
+    </div>
+
+    <div class="container">
+        <h2>📊 Test Results</h2>
+        <div class="stats">
+            <div class="stat-box">
+                <div class="value" id="totalCandidates">0</div>
+                <div class="label">Total Candidates</div>
+            </div>
+            <div class="stat-box">
+                <div class="value" id="checkedBooks">0</div>
+                <div class="label">Books Checked</div>
+            </div>
+            <div class="stat-box">
+                <div class="value" id="validDescriptions">0</div>
+                <div class="label">Valid Descriptions</div>
+            </div>
+            <div class="stat-box">
+                <div class="value" id="finalCount">0</div>
+                <div class="label">Final Recommendations</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>📖 Library Books (Input)</h2>
+        <div id="libraryBooks"></div>
+    </div>
+
+    <div class="container">
+        <h2>⭐ Recommendations (Output)</h2>
+        <div id="recommendations"></div>
+    </div>
+
+    <div class="container">
+        <h2>🔍 Debug Log</h2>
+        <div class="log-section" id="debugLog"></div>
+    </div>
+
+    <script>
+        // Test data: 20 Lee Child books
+        const testLibrary = [
+            { title: "Killing Floor", author: "Lee Child", year: 1997, key: "/works/OL15497282W", subjects: ["Thriller", "Mystery", "Suspense", "Crime"] },
+            { title: "Die Trying", author: "Lee Child", year: 1998, key: "/works/OL15497283W", subjects: ["Thriller", "Mystery", "Suspense"] },
+            { title: "Tripwire", author: "Lee Child", year: 1999, key: "/works/OL15497284W", subjects: ["Thriller", "Mystery"] },
+            { title: "Running Blind", author: "Lee Child", year: 2000, key: "/works/OL15497285W", subjects: ["Thriller", "Suspense"] },
+            { title: "Echo Burning", author: "Lee Child", year: 2001, key: "/works/OL15497286W", subjects: ["Thriller", "Mystery"] },
+            { title: "Without Fail", author: "Lee Child", year: 2002, key: "/works/OL15497287W", subjects: ["Thriller", "Suspense"] },
+            { title: "Persuader", author: "Lee Child", year: 2003, key: "/works/OL15497288W", subjects: ["Thriller", "Mystery"] },
+            { title: "The Enemy", author: "Lee Child", year: 2004, key: "/works/OL15497289W", subjects: ["Thriller", "Military fiction"] },
+            { title: "One Shot", author: "Lee Child", year: 2005, key: "/works/OL15497290W", subjects: ["Thriller", "Mystery"] },
+            { title: "The Hard Way", author: "Lee Child", year: 2006, key: "/works/OL15497291W", subjects: ["Thriller", "Suspense"] },
+            { title: "Bad Luck and Trouble", author: "Lee Child", year: 2007, key: "/works/OL15497292W", subjects: ["Thriller", "Mystery"] },
+            { title: "Nothing to Lose", author: "Lee Child", year: 2008, key: "/works/OL15497293W", subjects: ["Thriller", "Suspense"] },
+            { title: "Gone Tomorrow", author: "Lee Child", year: 2009, key: "/works/OL15497294W", subjects: ["Thriller", "Mystery"] },
+            { title: "61 Hours", author: "Lee Child", year: 2010, key: "/works/OL15497295W", subjects: ["Thriller", "Suspense"] },
+            { title: "Worth Dying For", author: "Lee Child", year: 2010, key: "/works/OL15497296W", subjects: ["Thriller", "Mystery"] },
+            { title: "A Wanted Man", author: "Lee Child", year: 2012, key: "/works/OL15497297W", subjects: ["Thriller", "Suspense"] },
+            { title: "Never Go Back", author: "Lee Child", year: 2013, key: "/works/OL15497298W", subjects: ["Thriller", "Mystery"] },
+            { title: "Personal", author: "Lee Child", year: 2014, key: "/works/OL15497299W", subjects: ["Thriller", "Suspense"] },
+            { title: "Make Me", author: "Lee Child", year: 2015, key: "/works/OL15497300W", subjects: ["Thriller", "Mystery"] },
+            { title: "Night School", author: "Lee Child", year: 2016, key: "/works/OL15497301W", subjects: ["Thriller", "Suspense"] }
+        ];
+
+        // Mock API responses for similar thriller authors
+        const mockApiData = {
+            subjects: {
+                "Thriller": [
+                    { title: "The Bourne Identity", author_name: ["Robert Ludlum"], key: "/works/OL123456W", cover_i: 12345, first_publish_year: 1980, subject: ["Thriller", "Espionage", "Suspense"], edition_count: 50, ratings_count: 1000, language: ["eng"] },
+                    { title: "The Day of the Jackal", author_name: ["Frederick Forsyth"], key: "/works/OL123457W", cover_i: 12346, first_publish_year: 1971, subject: ["Thriller", "Suspense"], edition_count: 45, ratings_count: 800, language: ["eng"] },
+                    { title: "The Hunt for Red October", author_name: ["Tom Clancy"], key: "/works/OL123458W", cover_i: 12347, first_publish_year: 1984, subject: ["Thriller", "Military fiction"], edition_count: 60, ratings_count: 1200, language: ["eng"] },
+                    { title: "Transfer of Power", author_name: ["Vince Flynn"], key: "/works/OL123459W", cover_i: 12348, first_publish_year: 1999, subject: ["Thriller", "Political thriller"], edition_count: 30, ratings_count: 600, language: ["eng"] },
+                    { title: "The Lions of Lucerne", author_name: ["Brad Thor"], key: "/works/OL123460W", cover_i: 12349, first_publish_year: 2002, subject: ["Thriller", "Political thriller"], edition_count: 25, ratings_count: 500, language: ["eng"] },
+                    { title: "Absolute Power", author_name: ["David Baldacci"], key: "/works/OL123461W", cover_i: 12350, first_publish_year: 1996, subject: ["Thriller", "Political thriller"], edition_count: 40, ratings_count: 900, language: ["eng"] },
+                    { title: "Point of Impact", author_name: ["Stephen Hunter"], key: "/works/OL123462W", cover_i: 12351, first_publish_year: 1993, subject: ["Thriller", "Military fiction"], edition_count: 20, ratings_count: 400, language: ["eng"] },
+                    { title: "The Charm School", author_name: ["Nelson DeMille"], key: "/works/OL123463W", cover_i: 12352, first_publish_year: 1988, subject: ["Thriller", "Espionage"], edition_count: 35, ratings_count: 700, language: ["eng"] },
+                ],
+                "Mystery": [
+                    { title: "The Girl with the Dragon Tattoo", author_name: ["Stieg Larsson"], key: "/works/OL123464W", cover_i: 12353, first_publish_year: 2005, subject: ["Mystery", "Thriller"], edition_count: 70, ratings_count: 2000, language: ["eng"] },
+                    { title: "Gone Girl", author_name: ["Gillian Flynn"], key: "/works/OL123465W", cover_i: 12354, first_publish_year: 2012, subject: ["Mystery", "Thriller"], edition_count: 55, ratings_count: 1500, language: ["eng"] },
+                ]
+            },
+            authors: {
+                "Lee Child": []  // No more Lee Child books to recommend
+            },
+            descriptions: {
+                "/works/OL123456W": "Jason Bourne wakes up with no memory and must piece together his identity while being hunted by assassins. A gripping thriller that redefined the espionage genre.",
+                "/works/OL123457W": "A professional assassin is hired to kill Charles de Gaulle. An intense cat-and-mouse game between the killer and the detective trying to stop him.",
+                "/works/OL123458W": "A Soviet submarine captain attempts to defect to the United States with his officers and the Soviet Navy's newest sub. A tense naval thriller.",
+                "/works/OL123459W": "CIA operative Mitch Rapp must stop terrorists who have taken over the White House. Fast-paced political thriller with non-stop action.",
+                "/works/OL123460W": "Secret Service agent Scot Harvath must rescue the President when he's kidnapped. A debut thriller that launched a bestselling series.",
+                "/works/OL123461W": "A career thief witnesses the President commit murder and must stay alive while exposing the truth. Political intrigue at its finest.",
+                "/works/OL123462W": "Bob Lee Swagger, a former Marine sniper, is framed for an assassination attempt and must clear his name. Action-packed military thriller.",
+                "/works/OL123463W": "An American tourist stumbles upon a secret KGB training facility in Russia. Classic Cold War espionage thriller.",
+                "/works/OL123464W": "A journalist and a hacker investigate a decades-old disappearance on a remote Swedish island. Dark, compelling mystery.",
+                "/works/OL123465W": "A woman disappears on her fifth wedding anniversary, and her husband becomes the prime suspect. Twisty psychological thriller.",
+            }
+        };
+
+        let logMessages = [];
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            logMessages.push({ timestamp, message, type });
+            updateLog();
+        }
+
+        function updateLog() {
+            const logDiv = document.getElementById('debugLog');
+            logDiv.innerHTML = logMessages.map(({ timestamp, message, type }) => {
+                return `<div class="log-${type}">[${timestamp}] ${message}</div>`;
+            }).join('');
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function clearLogs() {
+            logMessages = [];
+            updateLog();
+        }
+
+        async function mockFetch(url) {
+            log(`API Call: ${url}`, 'info');
+
+            // Simulate network delay
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            // Parse URL to determine what to return
+            if (url.includes('/search.json?subject=')) {
+                const subject = decodeURIComponent(url.split('subject=')[1].split('&')[0]);
+                log(`  → Returning ${mockApiData.subjects[subject]?.length || 0} books for subject: ${subject}`, 'info');
+                return { docs: mockApiData.subjects[subject] || [] };
+            } else if (url.includes('/search.json?author=')) {
+                const author = decodeURIComponent(url.split('author=')[1].split('&')[0]);
+                log(`  → Returning ${mockApiData.authors[author]?.length || 0} books for author: ${author}`, 'info');
+                return { docs: mockApiData.authors[author] || [] };
+            } else if (url.includes('.json') && url.includes('/works/')) {
+                const key = url.split('openlibrary.org')[1].replace('.json', '');
+                const description = mockApiData.descriptions[key];
+                log(`  → ${description ? 'Found' : 'No'} description for: ${key}`, description ? 'success' : 'warning');
+                return { description: description || null };
+            }
+
+            return {};
+        }
+
+        async function fetchBookDescription(bookKey) {
+            try {
+                const data = await mockFetch(`https://openlibrary.org${bookKey}.json`);
+                if (data.description) {
+                    if (typeof data.description === 'string') {
+                        return data.description;
+                    } else if (data.description.value) {
+                        return data.description.value;
+                    }
+                }
+                return null;
+            } catch (error) {
+                log(`Error fetching description for ${bookKey}: ${error}`, 'error');
+                return null;
+            }
+        }
+
+        async function validateBooksWithDescriptions(books, maxBooks = 18) {
+            const validatedBooks = [];
+            let checkedCount = 0;
+
+            log(`\n=== Starting Description Validation ===`, 'info');
+            log(`Checking ${books.length} candidates for descriptions...`, 'info');
+
+            const batchSize = 10;
+            for (let i = 0; i < books.length && validatedBooks.length < maxBooks; i += batchSize) {
+                const batch = books.slice(i, i + batchSize);
+                log(`\nBatch ${Math.floor(i/batchSize) + 1}: Checking ${batch.length} books...`, 'info');
+
+                const descriptions = await Promise.all(
+                    batch.map(book => fetchBookDescription(book.key))
+                );
+
+                batch.forEach((book, idx) => {
+                    checkedCount++;
+                    if (descriptions[idx] && descriptions[idx].length > 50 && validatedBooks.length < maxBooks) {
+                        validatedBooks.push({
+                            ...book,
+                            description: descriptions[idx]
+                        });
+                        log(`  ✓ Added: "${book.title}" by ${book.author_name[0]} (${descriptions[idx].length} chars) [${validatedBooks.length}/${maxBooks}]`, 'success');
+                    } else {
+                        const reason = !descriptions[idx] ? 'no description' : 'description too short';
+                        log(`  ✗ Skipped: "${book.title || 'Unknown'}" - ${reason}`, 'warning');
+                    }
+                });
+
+                document.getElementById('checkedBooks').textContent = checkedCount;
+                document.getElementById('validDescriptions').textContent = validatedBooks.length;
+            }
+
+            log(`\n=== Validation Complete ===`, 'success');
+            log(`Found ${validatedBooks.length} books with valid descriptions from ${checkedCount} checked`, 'success');
+            return validatedBooks;
+        }
+
+        async function generateRecommendations() {
+            log('\n\n========================================', 'info');
+            log('STARTING RECOMMENDATION GENERATION', 'info');
+            log('========================================\n', 'info');
+
+            const myBooks = testLibrary;
+            const myBookKeys = new Set(myBooks.map(b => b.key));
+            const recommendations = [];
+            const seenKeys = new Set();
+
+            // Extract preferences
+            const authors = [...new Set(myBooks.map(book => book.author))];
+            const allSubjects = myBooks.flatMap(book => book.subjects || []);
+
+            log(`Library: ${myBooks.length} books`, 'info');
+            log(`Authors: ${authors.join(', ')}`, 'info');
+            log(`All subjects: ${allSubjects.join(', ')}`, 'info');
+
+            // Get top subjects
+            const genericTerms = ['fiction', 'literature', 'books', 'reading', 'accessible book'];
+            const subjectFreq = {};
+            allSubjects.forEach(s => {
+                const lower = s.toLowerCase();
+                const isGeneric = genericTerms.some(term => lower === term || lower.startsWith(term));
+                if (!isGeneric && s.length > 3) {
+                    subjectFreq[s] = (subjectFreq[s] || 0) + 1;
+                }
+            });
+
+            const topSubjects = Object.entries(subjectFreq)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5)
+                .map(([subject]) => subject);
+
+            log(`\nTop subjects: ${topSubjects.join(', ')}`, 'info');
+
+            // Strategy 1: More from favorite authors
+            log('\n--- Strategy 1: Favorite Authors ---', 'info');
+            for (const author of authors.slice(0, 5)) {
+                const data = await mockFetch(`https://openlibrary.org/search.json?author=${encodeURIComponent(author)}&limit=50`);
+                const filtered = (data.docs || [])
+                    .filter(book => {
+                        const isEnglish = !book.language || book.language.includes('eng');
+                        return !myBookKeys.has(book.key) && !seenKeys.has(book.key) &&
+                               book.cover_i && isEnglish;
+                    })
+                    .slice(0, 8);
+
+                log(`${author}: Found ${filtered.length} books`, filtered.length > 0 ? 'success' : 'warning');
+                filtered.forEach(book => {
+                    seenKeys.add(book.key);
+                    recommendations.push({ ...book, recommendedBy: author, recommendationType: 'author', score: 500 });
+                });
+            }
+
+            // Strategy 2: Popular books from genres
+            log('\n--- Strategy 2: Genre-Based ---', 'info');
+            for (const subject of topSubjects.slice(0, 4)) {
+                const data = await mockFetch(`https://openlibrary.org/search.json?subject=${encodeURIComponent(subject)}&limit=100`);
+                const filtered = (data.docs || [])
+                    .filter(book => {
+                        const isEnglish = !book.language || book.language.includes('eng');
+                        const hasSubject = book.subject?.some(s =>
+                            s.toLowerCase().includes(subject.toLowerCase())
+                        );
+                        return !myBookKeys.has(book.key) && !seenKeys.has(book.key) &&
+                               book.cover_i && isEnglish && hasSubject;
+                    })
+                    .slice(0, 10);
+
+                log(`${subject}: Found ${filtered.length} books`, filtered.length > 0 ? 'success' : 'warning');
+                filtered.forEach(book => {
+                    seenKeys.add(book.key);
+                    const score = (book.edition_count || 0) * 2 + (book.ratings_count || 0) * 15;
+                    recommendations.push({ ...book, recommendedBy: subject, score });
+                });
+            }
+
+            // Strategy 3: New authors
+            log('\n--- Strategy 3: New Authors ---', 'info');
+            for (const subject of topSubjects.slice(0, 3)) {
+                const data = await mockFetch(`https://openlibrary.org/search.json?subject=${encodeURIComponent(subject)}&limit=80`);
+                const filtered = (data.docs || [])
+                    .filter(book => {
+                        const bookAuthor = book.author_name?.[0];
+                        const isEnglish = !book.language || book.language.includes('eng');
+                        const hasSubject = book.subject?.some(s =>
+                            s.toLowerCase().includes(subject.toLowerCase())
+                        );
+                        return bookAuthor && !authors.includes(bookAuthor) &&
+                               !myBookKeys.has(book.key) && !seenKeys.has(book.key) &&
+                               book.cover_i && isEnglish && hasSubject;
+                    })
+                    .slice(0, 8);
+
+                log(`${subject} (new authors): Found ${filtered.length} books`, filtered.length > 0 ? 'success' : 'warning');
+                filtered.forEach(book => {
+                    seenKeys.add(book.key);
+                    const score = (book.edition_count || 0) + (book.ratings_count || 0) * 10 + 100;
+                    recommendations.push({ ...book, recommendedBy: 'New author', score });
+                });
+            }
+
+            log(`\n=== Total candidates collected: ${recommendations.length} ===`, 'info');
+            document.getElementById('totalCandidates').textContent = recommendations.length;
+
+            if (recommendations.length === 0) {
+                log('No recommendations found!', 'error');
+                return [];
+            }
+
+            // Sort and validate
+            const topCandidates = recommendations
+                .sort((a, b) => (b.score || 0) - (a.score || 0))
+                .slice(0, 100);
+
+            log(`\nProcessing top ${topCandidates.length} candidates for description validation...`, 'info');
+
+            const uniqueRecs = await validateBooksWithDescriptions(topCandidates, 18);
+
+            document.getElementById('finalCount').textContent = uniqueRecs.length;
+
+            return uniqueRecs;
+        }
+
+        async function runTest() {
+            // Display library
+            const libraryDiv = document.getElementById('libraryBooks');
+            libraryDiv.innerHTML = testLibrary.map(book =>
+                `<div class="book-item"><strong>${book.title}</strong> by ${book.author} (${book.year})</div>`
+            ).join('');
+
+            // Clear previous results
+            clearLogs();
+            document.getElementById('recommendations').innerHTML = '<p>Running test...</p>';
+            document.getElementById('totalCandidates').textContent = '...';
+            document.getElementById('checkedBooks').textContent = '...';
+            document.getElementById('validDescriptions').textContent = '...';
+            document.getElementById('finalCount').textContent = '...';
+
+            // Run recommendation generation
+            const results = await generateRecommendations();
+
+            // Display results
+            const recsDiv = document.getElementById('recommendations');
+            if (results.length === 0) {
+                recsDiv.innerHTML = '<p style="color: red;">❌ No recommendations found!</p>';
+            } else {
+                recsDiv.innerHTML = results.map(book =>
+                    `<div class="book-item">
+                        <strong>${book.title}</strong> by ${book.author_name[0]}<br>
+                        <small>Reason: ${book.recommendedBy} | Score: ${book.score} | Published: ${book.first_publish_year}</small><br>
+                        <small>Description: ${book.description?.substring(0, 100)}...</small>
+                    </div>`
+                ).join('');
+            }
+
+            log('\n========================================', 'info');
+            log('TEST COMPLETE', 'success');
+            log('========================================', 'info');
+        }
+
+        // Auto-run on load
+        window.addEventListener('load', () => {
+            setTimeout(runTest, 500);
+        });
+    </script>
+</body>
+</html>
