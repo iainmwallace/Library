@@ -6,7 +6,7 @@ A mobile-optimized static web application for tracking books you've read and dis
 
 Single-file HTML/CSS/JavaScript application that runs entirely in the browser with no backend required. Data is stored locally using browser LocalStorage.
 
-**Live Version**: v1.1.0
+**Live Version**: v1.2.0
 
 ## Features
 
@@ -29,12 +29,12 @@ Single-file HTML/CSS/JavaScript application that runs entirely in the browser wi
 - Persistent storage across browser sessions
 
 ### 3. Smart Recommendations
-Three-strategy recommendation engine:
-- **Genre-based (50%)**: Popular books in your top genres (up to 9 books, 3 per genre)
-- **Author discovery (30%)**: Books from new authors in your favorite genres (up to 6 books, 2 per author)
-- **Favorite authors (20%)**: More books from authors you've already read (up to 6 books, 2 per author)
+Enhanced three-strategy recommendation engine:
+- **Favorite authors (Priority 1)**: More books from authors you love (up to 20 books, 4 per author, 5 authors)
+- **Genre-based (Priority 2)**: Popular books in your top genres (up to 20 books, 5 per genre, 4 genres)
+- **Author discovery (Priority 3)**: Books from new authors in your favorite genres (up to 12 books, 4 per author, 3 genres)
 
-Maximum 15 recommendations displayed, refreshed when library changes.
+Maximum 18 recommendations displayed with improved duplicate filtering and relevance scoring. Refreshed when library changes.
 
 ### 4. Book Details Modal
 - Full book information with **description/synopsis** fetched from Open Library
