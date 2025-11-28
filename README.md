@@ -6,7 +6,7 @@ A mobile-optimized static web application for tracking books you've read and dis
 
 Single-file HTML/CSS/JavaScript application that runs entirely in the browser with no backend required. Data is stored locally using browser LocalStorage.
 
-**Live Version**: v1.3.0
+**Live Version**: v1.3.1
 
 ## Features
 
