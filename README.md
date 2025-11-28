@@ -6,7 +6,7 @@ A mobile-optimized static web application for tracking books you've read and dis
 
 Single-file HTML/CSS/JavaScript application that runs entirely in the browser with no backend required. Data is stored locally using browser LocalStorage.
 
-**Live Version**: v1.2.0
+**Live Version**: v1.3.0
 
 ## Features
 
@@ -29,15 +29,22 @@ Single-file HTML/CSS/JavaScript application that runs entirely in the browser wi
 - Persistent storage across browser sessions
 
 ### 3. Smart Recommendations
-Enhanced three-strategy recommendation engine:
-- **Favorite authors (Priority 1)**: More books from authors you love (up to 20 books, 4 per author, 5 authors)
-- **Genre-based (Priority 2)**: Popular books in your top genres (up to 20 books, 5 per genre, 4 genres)
-- **Author discovery (Priority 3)**: Books from new authors in your favorite genres (up to 12 books, 4 per author, 3 genres)
+Enhanced three-strategy recommendation engine with quality filters:
+- **Favorite authors (Priority 1)**: More books from authors you love (up to 40 books, 8 per author, 5 authors)
+- **Genre-based (Priority 2)**: Popular books in your top genres (up to 40 books, 10 per genre, 4 genres)
+- **Author discovery (Priority 3)**: Books from new authors in your favorite genres (up to 24 books, 8 per author, 3 genres)
 
-Maximum 18 recommendations displayed with improved duplicate filtering and relevance scoring. Refreshed when library changes.
+**Quality Filters:**
+- English-only books
+- Books with descriptions/summaries
+- Cover images required
+- Duplicate filtering across strategies
+
+Maximum 18 recommendations displayed after validation. **Refresh button** available to regenerate recommendations on demand.
 
 ### 4. Book Details Modal
-- Full book information with **description/synopsis** fetched from Open Library
+- Full book information with **guaranteed description/synopsis**
+- Descriptions pre-fetched for recommendations (instant display)
 - Cover image
 - Publication year and publisher
 - Genres and topics
