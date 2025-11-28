@@ -474,6 +474,15 @@
             overflow-y: auto;
         }
 
+        .book-description.placeholder {
+            color: #999;
+            font-style: italic;
+            text-align: center;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 8px;
+        }
+
         .buy-links {
             display: flex;
             flex-wrap: wrap;
@@ -578,7 +587,7 @@
     <div class="container">
         <h1>
             📚 My Library
-            <span class="version">v1.3.2</span>
+            <span class="version">v1.4.0</span>
         </h1>
 
         <div class="tabs">
@@ -931,7 +940,7 @@
             const validatedBooks = [];
             let checkedCount = 0;
 
-            // Process books in batches to avoid overwhelming the API
+            // Process books in batches
             const batchSize = 10;
             for (let i = 0; i < books.length && validatedBooks.length < maxBooks; i += batchSize) {
                 const batch = books.slice(i, i + batchSize);
@@ -941,21 +950,33 @@
 
                 batch.forEach((book, idx) => {
                     checkedCount++;
-                    if (descriptions[idx] && descriptions[idx].length > 50 && validatedBooks.length < maxBooks) {
+                    if (validatedBooks.length < maxBooks) {
+                        const description = descriptions[idx] && descriptions[idx].length > 50
+                            ? descriptions[idx]
+                            : "No description available for this book. Check the purchase links below for more details.";
+
                         validatedBooks.push({
                             ...book,
-                            description: descriptions[idx]
+                            description: description,
+                            hasRealDescription: descriptions[idx] && descriptions[idx].length > 50
                         });
-                        console.log(`✓ Added: ${book.title} (${validatedBooks.length}/${maxBooks})`);
-                    } else {
-                        console.log(`✗ Skipped: ${book.title || 'Unknown'} - ${descriptions[idx] ? 'description too short' : 'no description'}`);
+
+                        const status = descriptions[idx] && descriptions[idx].length > 50 ? '✓' : '○';
+                        console.log(`${status} Added: ${book.title} (${validatedBooks.length}/${maxBooks})`);
                     }
                 });
 
                 console.log(`Progress: ${validatedBooks.length}/${maxBooks} validated from ${checkedCount} checked`);
             }
 
-            console.log(`Final: Found ${validatedBooks.length} books with descriptions from ${checkedCount} candidates`);
+            // Sort to prioritize books with real descriptions
+            validatedBooks.sort((a, b) => {
+                if (a.hasRealDescription && !b.hasRealDescription) return -1;
+                if (!a.hasRealDescription && b.hasRealDescription) return 1;
+                return 0;
+            });
+
+            console.log(`Final: ${validatedBooks.length} books (${validatedBooks.filter(b => b.hasRealDescription).length} with descriptions)`);
             return validatedBooks;
         }
 
@@ -1179,19 +1200,19 @@
                     return;
                 }
 
-                // Sort by score and get top candidates (need many since most won't have descriptions)
+                // Sort by score and get top candidates
                 const topCandidates = recommendations
                     .sort((a, b) => (b.score || 0) - (a.score || 0))
-                    .slice(0, 100);
+                    .slice(0, 50);
 
-                console.log(`Checking ${topCandidates.length} candidates for descriptions...`);
+                console.log(`Processing ${topCandidates.length} candidates...`);
 
-                // Validate that books have descriptions
-                recommendationsDiv.innerHTML = '<div class="loading">Finding books with descriptions...</div>';
+                // Validate and fetch descriptions (accepts books without descriptions)
+                recommendationsDiv.innerHTML = '<div class="loading">Loading recommendations...</div>';
                 const uniqueRecs = await validateBooksWithDescriptions(topCandidates, 18);
 
                 if (uniqueRecs.length === 0) {
-                    recommendationsDiv.innerHTML = '<div class="empty-state">No recommendations with descriptions found. Try adding more books to your library!</div>';
+                    recommendationsDiv.innerHTML = '<div class="empty-state">No recommendations found. Try adding more books to your library!</div>';
                     isGeneratingRecommendations = false;
                     return;
                 }
@@ -1304,6 +1325,7 @@
             }
 
             // Update modal with full content
+            const isPlaceholder = description.startsWith("No description available");
             modalBody.innerHTML = `
                 <div class="modal-book-header">
                     ${book.cover ? `<img src="${book.cover}" class="modal-book-cover" alt="${book.title}">` : '<div class="modal-book-cover"></div>'}
@@ -1319,7 +1341,7 @@
                 ${description ? `
                     <div class="modal-section">
                         <h3>Description</h3>
-                        <p class="book-description">${description}</p>
+                        <p class="book-description ${isPlaceholder ? 'placeholder' : ''}">${description}</p>
                     </div>
                 ` : ''}
 
