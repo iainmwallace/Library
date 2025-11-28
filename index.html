@@ -578,7 +578,7 @@
     <div class="container">
         <h1>
             📚 My Library
-            <span class="version">v1.3.1</span>
+            <span class="version">v1.3.2</span>
         </h1>
 
         <div class="tabs">
@@ -929,9 +929,10 @@
 
         async function validateBooksWithDescriptions(books, maxBooks = 18) {
             const validatedBooks = [];
+            let checkedCount = 0;
 
             // Process books in batches to avoid overwhelming the API
-            const batchSize = 5;
+            const batchSize = 10;
             for (let i = 0; i < books.length && validatedBooks.length < maxBooks; i += batchSize) {
                 const batch = books.slice(i, i + batchSize);
                 const descriptions = await Promise.all(
@@ -939,15 +940,22 @@
                 );
 
                 batch.forEach((book, idx) => {
-                    if (descriptions[idx] && validatedBooks.length < maxBooks) {
+                    checkedCount++;
+                    if (descriptions[idx] && descriptions[idx].length > 50 && validatedBooks.length < maxBooks) {
                         validatedBooks.push({
                             ...book,
                             description: descriptions[idx]
                         });
+                        console.log(`✓ Added: ${book.title} (${validatedBooks.length}/${maxBooks})`);
+                    } else {
+                        console.log(`✗ Skipped: ${book.title || 'Unknown'} - ${descriptions[idx] ? 'description too short' : 'no description'}`);
                     }
                 });
+
+                console.log(`Progress: ${validatedBooks.length}/${maxBooks} validated from ${checkedCount} checked`);
             }
 
+            console.log(`Final: Found ${validatedBooks.length} books with descriptions from ${checkedCount} candidates`);
             return validatedBooks;
         }
 
@@ -1171,13 +1179,15 @@
                     return;
                 }
 
-                // Sort by score and get top candidates
+                // Sort by score and get top candidates (need many since most won't have descriptions)
                 const topCandidates = recommendations
                     .sort((a, b) => (b.score || 0) - (a.score || 0))
-                    .slice(0, 40);
+                    .slice(0, 100);
+
+                console.log(`Checking ${topCandidates.length} candidates for descriptions...`);
 
                 // Validate that books have descriptions
-                recommendationsDiv.innerHTML = '<div class="loading">Validating book descriptions...</div>';
+                recommendationsDiv.innerHTML = '<div class="loading">Finding books with descriptions...</div>';
                 const uniqueRecs = await validateBooksWithDescriptions(topCandidates, 18);
 
                 if (uniqueRecs.length === 0) {
