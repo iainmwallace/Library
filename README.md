@@ -6,7 +6,7 @@ A mobile-optimized static web application for tracking books you've read and dis
 
 Single-file HTML/CSS/JavaScript application that runs entirely in the browser with no backend required. Data is stored locally using browser LocalStorage.
 
-**Live Version**: v1.0.0
+**Live Version**: v1.1.0
 
 ## Features
 
@@ -20,8 +20,11 @@ Single-file HTML/CSS/JavaScript application that runs entirely in the browser wi
 
 ### 2. Personal Library
 - Track all books you've read
-- Sorted by author (alphabetically), then by publication date (newest first)
-- Click any book to view details
+- **Author grouping** - books organized by author with collapsible sections
+- Click on author header to expand/collapse their books
+- Shows book count per author
+- Books sorted by publication date within each author group (newest first)
+- Click any book to view full details including description
 - Remove books from library
 - Persistent storage across browser sessions
 
@@ -34,9 +37,10 @@ Three-strategy recommendation engine:
 Maximum 15 recommendations displayed, refreshed when library changes.
 
 ### 4. Book Details Modal
-- Full book information
+- Full book information with **description/synopsis** fetched from Open Library
 - Cover image
-- Publication year
+- Publication year and publisher
+- Genres and topics
 - Direct purchase links to:
   - Amazon search
   - Bookshop.org (supports independent bookstores)
@@ -145,12 +149,23 @@ Three tabs with icon indicators:
 - 📚 Library: User's book collection
 - ⭐ Recommendations: Personalized suggestions
 
+#### Author Grouping (Library)
+Collapsible author sections:
+- Author name with book count
+- Click to expand/collapse books for each author
+- Visual toggle indicator (▼/▲)
+- Gradient background styling
+- Hover effects for better UX
+
 #### Modal Dialog
 Reusable modal for book details:
 - Overlay with click-to-close
 - Book cover and metadata
+- **Async loading** - shows loading state while fetching description
+- Book description/synopsis (when available)
+- Genres and topics
 - Purchase links section
-- Responsive sizing
+- Responsive sizing with scrollable content
 
 ### Styling
 
