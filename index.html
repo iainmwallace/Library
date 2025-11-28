@@ -556,7 +556,7 @@
     <div class="container">
         <h1>
             📚 My Library
-            <span class="version">v1.1.0</span>
+            <span class="version">v1.2.0</span>
         </h1>
 
         <div class="tabs">
@@ -904,6 +904,9 @@
                 const recommendations = [];
                 const seenKeys = new Set();
 
+                // Store book keys from library for filtering
+                const myBookKeys = new Set(myBooks.map(b => b.key));
+
                 // Extract user preferences
                 const authors = [...new Set(myBooks.map(book => book.author))];
                 const allSubjects = myBooks.flatMap(book => book.subjects || []);
@@ -915,13 +918,12 @@
                     'open library staff picks', 'new york times bestseller',
                     'bestseller', 'award winners', 'english literature',
                     'american literature', 'british literature', 'contemporary',
-                    'modern', 'popular', 'collections', 'anthologies'
+                    'modern', 'popular', 'collections', 'anthologies', 'protected daisy'
                 ];
 
                 const subjectFreq = {};
                 allSubjects.forEach(s => {
                     const lower = s.toLowerCase();
-                    // Only count subjects that are specific genres, not generic terms
                     const isGeneric = genericTerms.some(term =>
                         lower === term || lower.startsWith(term + ',') || lower.endsWith(term)
                     );
@@ -936,106 +938,27 @@
                     .map(([subject]) => subject)
                     .filter(s => s && s.length > 3);
 
-                // Strategy 1: Get popular books from top genres (50% of results)
-                for (const subject of topSubjects.slice(0, 3)) {
+                console.log('Top subjects:', topSubjects);
+
+                // Strategy 1: More from favorite authors (high priority)
+                for (const author of authors.slice(0, 5)) {
                     try {
-                        const response = await fetch(`https://openlibrary.org/search.json?subject=${encodeURIComponent(subject)}&limit=50`);
-                        const data = await response.json();
-
-                        if (data.docs) {
-                            const filtered = data.docs
-                                .filter(book => {
-                                    // Extra validation: make sure the book actually matches the genre
-                                    const hasMatchingSubject = book.subject?.some(s =>
-                                        s.toLowerCase().includes(subject.toLowerCase()) ||
-                                        subject.toLowerCase().includes(s.toLowerCase())
-                                    );
-
-                                    return !myBooks.some(myBook => myBook.key === book.key) &&
-                                        !seenKeys.has(book.key) &&
-                                        book.cover_i &&
-                                        book.first_publish_year >= 1980 &&
-                                        book.author_name && // Must have an author
-                                        hasMatchingSubject; // Must actually be in this genre
-                                })
-                                .sort((a, b) => {
-                                    // Sort by popularity
-                                    const scoreA = (a.edition_count || 0) + (a.ratings_count || 0) * 10;
-                                    const scoreB = (b.edition_count || 0) + (b.ratings_count || 0) * 10;
-                                    return scoreB - scoreA;
-                                })
-                                .slice(0, 3);
-
-                            filtered.forEach(book => {
-                                seenKeys.add(book.key);
-                                recommendations.push({
-                                    ...book,
-                                    recommendedBy: subject,
-                                    score: (book.edition_count || 0) + (book.ratings_count || 0) * 10 + (book.want_to_read_count || 0)
-                                });
-                            });
-                        }
-                    } catch (e) {
-                        console.error('Error fetching genre recommendations:', e);
-                    }
-                }
-
-                // Strategy 2: Discover new authors in same genres (30% of results)
-                for (const subject of topSubjects.slice(0, 2)) {
-                    try {
-                        const response = await fetch(`https://openlibrary.org/search.json?subject=${encodeURIComponent(subject)}&limit=60`);
-                        const data = await response.json();
-
-                        if (data.docs) {
-                            const newAuthorBooks = data.docs
-                                .filter(book => {
-                                    const bookAuthor = book.author_name?.[0];
-                                    const hasMatchingSubject = book.subject?.some(s =>
-                                        s.toLowerCase().includes(subject.toLowerCase()) ||
-                                        subject.toLowerCase().includes(s.toLowerCase())
-                                    );
-
-                                    return bookAuthor &&
-                                        !authors.includes(bookAuthor) &&
-                                        !myBooks.some(myBook => myBook.key === book.key) &&
-                                        !seenKeys.has(book.key) &&
-                                        book.cover_i &&
-                                        book.first_publish_year >= 1980 &&
-                                        hasMatchingSubject;
-                                })
-                                .sort((a, b) => (b.edition_count || 0) - (a.edition_count || 0))
-                                .slice(0, 2);
-
-                            newAuthorBooks.forEach(book => {
-                                seenKeys.add(book.key);
-                                recommendations.push({
-                                    ...book,
-                                    recommendedBy: 'New author',
-                                    score: (book.edition_count || 0) + (book.ratings_count || 0) * 5
-                                });
-                            });
-                        }
-                    } catch (e) {
-                        console.error('Error fetching new author recommendations:', e);
-                    }
-                }
-
-                // Strategy 3: More from favorite authors (20% of results)
-                for (const author of authors.slice(0, 3)) {
-                    try {
-                        const response = await fetch(`https://openlibrary.org/search.json?author=${encodeURIComponent(author)}&limit=20`);
+                        const response = await fetch(`https://openlibrary.org/search.json?author=${encodeURIComponent(author)}&limit=50&sort=new`);
                         const data = await response.json();
 
                         if (data.docs) {
                             const filtered = data.docs
                                 .filter(book =>
-                                    !myBooks.some(myBook => myBook.key === book.key) &&
+                                    !myBookKeys.has(book.key) &&
                                     !seenKeys.has(book.key) &&
                                     book.cover_i &&
-                                    book.first_publish_year >= 1970
+                                    book.first_publish_year >= 1960 &&
+                                    book.author_name?.[0]?.toLowerCase().includes(author.toLowerCase())
                                 )
                                 .sort((a, b) => (b.first_publish_year || 0) - (a.first_publish_year || 0))
-                                .slice(0, 2);
+                                .slice(0, 4);
+
+                            console.log(`Found ${filtered.length} books by ${author}`);
 
                             filtered.forEach(book => {
                                 seenKeys.add(book.key);
@@ -1043,7 +966,7 @@
                                     ...book,
                                     recommendedBy: author,
                                     recommendationType: 'author',
-                                    score: (book.edition_count || 0) + (book.ratings_count || 0) * 10 + 200 // Boost favorite authors
+                                    score: (book.edition_count || 0) * 2 + (book.ratings_count || 0) * 10 + 500
                                 });
                             });
                         }
@@ -1052,15 +975,115 @@
                     }
                 }
 
+                // Strategy 2: Popular books from top genres
+                for (const subject of topSubjects.slice(0, 4)) {
+                    try {
+                        const response = await fetch(`https://openlibrary.org/search.json?subject=${encodeURIComponent(subject)}&limit=100&sort=rating`);
+                        const data = await response.json();
+
+                        if (data.docs) {
+                            const filtered = data.docs
+                                .filter(book => {
+                                    if (!book.subject || !Array.isArray(book.subject)) return false;
+
+                                    // Check if book has matching subject
+                                    const subjectLower = subject.toLowerCase();
+                                    const hasMatchingSubject = book.subject.some(s => {
+                                        const sLower = s.toLowerCase();
+                                        return sLower.includes(subjectLower) ||
+                                               subjectLower.includes(sLower);
+                                    });
+
+                                    return !myBookKeys.has(book.key) &&
+                                        !seenKeys.has(book.key) &&
+                                        book.cover_i &&
+                                        book.first_publish_year >= 1970 &&
+                                        book.author_name &&
+                                        hasMatchingSubject;
+                                })
+                                .sort((a, b) => {
+                                    const scoreA = (a.edition_count || 0) * 2 + (a.ratings_count || 0) * 15;
+                                    const scoreB = (b.edition_count || 0) * 2 + (b.ratings_count || 0) * 15;
+                                    return scoreB - scoreA;
+                                })
+                                .slice(0, 5);
+
+                            console.log(`Found ${filtered.length} books for genre ${subject}`);
+
+                            filtered.forEach(book => {
+                                seenKeys.add(book.key);
+                                recommendations.push({
+                                    ...book,
+                                    recommendedBy: subject,
+                                    score: (book.edition_count || 0) * 2 + (book.ratings_count || 0) * 15
+                                });
+                            });
+                        }
+                    } catch (e) {
+                        console.error('Error fetching genre recommendations:', e);
+                    }
+                }
+
+                // Strategy 3: Discover new authors in same genres
+                for (const subject of topSubjects.slice(0, 3)) {
+                    try {
+                        const response = await fetch(`https://openlibrary.org/search.json?subject=${encodeURIComponent(subject)}&limit=80&sort=rating`);
+                        const data = await response.json();
+
+                        if (data.docs) {
+                            const newAuthorBooks = data.docs
+                                .filter(book => {
+                                    const bookAuthor = book.author_name?.[0];
+                                    if (!book.subject || !Array.isArray(book.subject)) return false;
+
+                                    const subjectLower = subject.toLowerCase();
+                                    const hasMatchingSubject = book.subject.some(s => {
+                                        const sLower = s.toLowerCase();
+                                        return sLower.includes(subjectLower) || subjectLower.includes(sLower);
+                                    });
+
+                                    return bookAuthor &&
+                                        !authors.some(a => a.toLowerCase() === bookAuthor.toLowerCase()) &&
+                                        !myBookKeys.has(book.key) &&
+                                        !seenKeys.has(book.key) &&
+                                        book.cover_i &&
+                                        book.first_publish_year >= 1970 &&
+                                        hasMatchingSubject;
+                                })
+                                .sort((a, b) => {
+                                    const scoreA = (a.edition_count || 0) + (a.ratings_count || 0) * 10;
+                                    const scoreB = (b.edition_count || 0) + (b.ratings_count || 0) * 10;
+                                    return scoreB - scoreA;
+                                })
+                                .slice(0, 4);
+
+                            console.log(`Found ${newAuthorBooks.length} new author books for ${subject}`);
+
+                            newAuthorBooks.forEach(book => {
+                                seenKeys.add(book.key);
+                                recommendations.push({
+                                    ...book,
+                                    recommendedBy: 'New author',
+                                    score: (book.edition_count || 0) + (book.ratings_count || 0) * 10 + 100
+                                });
+                            });
+                        }
+                    } catch (e) {
+                        console.error('Error fetching new author recommendations:', e);
+                    }
+                }
+
+                console.log(`Total recommendations found: ${recommendations.length}`);
+
                 if (recommendations.length === 0) {
                     recommendationsDiv.innerHTML = '<div class="empty-state">No recommendations found. Try adding more books to your library!</div>';
                     return;
                 }
 
-                // Sort by score and diversity
+                // Sort by score and limit
                 const uniqueRecs = recommendations
                     .sort((a, b) => (b.score || 0) - (a.score || 0))
-                    .slice(0, 12);
+                    .slice(0, 18);
 
                 const html = '<div class="books-grid">' + uniqueRecs.map(book => {
                     const title = book.title || 'Unknown Title';
